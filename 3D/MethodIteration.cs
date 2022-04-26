@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using AngouriMath;
 
@@ -9,24 +8,33 @@ namespace Tao_OpenGL_Initialization_Test
     class MethodIteration
     {
         private bool calculated = false;
+        public bool ikeda = false;
         private Dictionary<int, int[]> graph;
-        private Dictionary<int, int[]> graph_strong;
+        public Dictionary<int, int[]> graph_strong;
         private Dictionary<int, List<int>> i_graph;
         private bool[] visited;
         private List<List<int>> strong_components;
-        private float x_0, y_0, d;
-        private int N;
-        private int iter;
+        public float x_0, y_0, d;
+        public int N;
+        public List<int> comp;
+        public int iter;
         private List<int> co;
         private Func<double, double, double> funcx;
         private Func<double, double, double> funcy;
 
-        public int N1 { get => N; set => N = value; }
-        public float X_0 { get => x_0; set => x_0 = value; }
-        public float D { get => d; set => d = value; }
-        public float Y_0 { get => y_0; set => y_0 = value; }
-        public Dictionary<int, int[]> Graph { get => graph_strong; set => graph = value; }
-        public int Iter { get => iter; set => iter = value; }
+
+        /*public double computingX(double x, double y, double t)
+        {
+            return (double)(1 - 0.9 * (x * Math.Cos(t) - y * Math.Sin(t)));
+        }
+        public double computingY(double x, double y, double t)
+        {
+            return (double)(1.2 * (x * Math.Sin(t) + y * Math.Cos(t)));
+        }
+        public double computingt(double x, double y)
+        {
+            return (double)(0.4f - 6 / (1 + x * x + y * y));
+        }*/
        
         public MethodIteration(Entity formulax, Entity formulay)
         {
@@ -44,11 +52,8 @@ namespace Tao_OpenGL_Initialization_Test
         }
 
 
-        public List<int> calculate()
+        public void calculate()
         {
-            Stopwatch time = new Stopwatch();
-            time.Start();
-
             if (!calculated)
             {
                 calculated = true;
@@ -76,7 +81,6 @@ namespace Tao_OpenGL_Initialization_Test
                 Make_graph(graph_keys);
                 strong_components = kosaraju();
             }
-
             graph_strong = new Dictionary<int, int[]>();
 
             List<int> comp = new List<int>();
@@ -91,7 +95,7 @@ namespace Tao_OpenGL_Initialization_Test
                 }
             }
 
-            foreach (int j in graph.Keys)
+            /*foreach (int j in graph.Keys)
             {
                 if (comp.Contains(j))
                 {
@@ -105,10 +109,10 @@ namespace Tao_OpenGL_Initialization_Test
                     }
                     graph_strong[j] = a.ToArray();
                 }
-            }
+            }*/
+            graph_strong = graph;
             calculated = false;
-            time.Stop();
-            return comp;
+            this.comp = comp;
         }
 
         private List<List<int>> kosaraju()
@@ -143,6 +147,8 @@ namespace Tao_OpenGL_Initialization_Test
                 foreach (int v in coms[i])
                 {
                     co = new List<int>();
+                    //Thread thread = new Thread(() => dfs2(v), 100000000);
+                    //thread.Start();
                     dfs2(v);
                     if (co.Count > 1 || (co.Count == 1 && graph[co[0]].Contains(co[0])))
                     {
@@ -150,6 +156,14 @@ namespace Tao_OpenGL_Initialization_Test
                     }
                 }
             }
+            //foreach (int i in graph.Keys)
+            //{
+            //    if (graph[i].Contains(i))
+            //    {
+
+            //        components.Add(new List<int>{ i });
+            //    }
+            //}
             return components;
         }
 
@@ -260,8 +274,8 @@ namespace Tao_OpenGL_Initialization_Test
                 {
                     for (int j = 1; j <= 4; j++)
                     {
-                        double x_i = x_n + 0.3333 * d *(j - 1);
-                        double y_i = y_n - 0.3333 * d* (i - 1);
+                        double x_i = x_n + 0.333 * d * (j - 1);
+                        double y_i = y_n - 0.333 * d * (i - 1);
 
                         int l = get_nums(funcx(x_i, y_i), funcy(x_i, y_i));
                         if (l != -1)
@@ -277,7 +291,7 @@ namespace Tao_OpenGL_Initialization_Test
 
         private int get_nums(double x, double y)
         {
-            if (Math.Abs(x) > Math.Abs(x_0) || Math.Abs(y) > Math.Abs(y_0))
+            if (Math.Abs(x) > -x_0 || Math.Abs(y) > y_0)
             {
                 return -1;
             }

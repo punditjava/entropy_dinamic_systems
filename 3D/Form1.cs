@@ -1,6 +1,7 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
 using osiptest;
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading;
 using System.Windows.Forms;
@@ -13,7 +14,6 @@ namespace _3D
 {
     public partial class Form1 : Form
     {
-        private List<int> geometricArray;
         Vector<double> vec;
         private double[] gr;
         private float[,] coor;
@@ -53,13 +53,13 @@ namespace _3D
 
             calcuteMethods = new MethodIteration(expr1, expr2);
 
-            calcuteMethods.X_0 = -3.5f;
-            calcuteMethods.Y_0 = 3.5f;
-            
-            textBox2.Text = calcuteMethods.X_0.ToString();
-            textBox3.Text = calcuteMethods.Y_0.ToString();
-            calcuteMethods.Iter = 6;
-            textBox1.Text = calcuteMethods.Iter.ToString();
+            calcuteMethods.x_0 = -3.5f;
+            calcuteMethods.y_0 = 3.5f;
+            calcuteMethods.ikeda = true;
+            textBox2.Text = calcuteMethods.x_0.ToString();
+            textBox3.Text = calcuteMethods.y_0.ToString();
+            calcuteMethods.iter = 4;
+            textBox1.Text = calcuteMethods.iter.ToString();
 
             RenderTime.Start();
         }
@@ -74,26 +74,45 @@ namespace _3D
             if (notCalculate) {
                 calcuteMethods.setFX(textX.Text);
                 calcuteMethods.setFY(textY.Text);
-                Thread t = new Thread(new ThreadStart(calculate_mesure), 2000000000);
-                t.Start();
-                t.Join();
-                SparseMatrix sm = new SparseMatrix(calcuteMethods.Graph);
+                Stopwatch time = new Stopwatch();
+                time.Start();
+                Thread thread = new Thread(new ThreadStart(calculate_mesure), 250000000);
+                thread.Start();
+                thread.Join();
+                time.Stop();
+                double time_obr = time.Elapsed.TotalSeconds;
+                timeobr.Text = time_obr.ToString();
+                SparseMatrix sm = new SparseMatrix(calcuteMethods.graph_strong);
+                time = new Stopwatch();
+                time.Start();
                 EigenValues ev = new EigenValues(sm);
                 double lambda;
-                ev.Power(1e-10, out vec, out lambda);
+                ev.Power(1e-7, out vec, out lambda);
+                time.Stop();
+                double time_ent = time.Elapsed.TotalSeconds;
+                timeentopy.Text = time_ent.ToString();
                 textBox9.Text = Math.Log(lambda).ToString();
                 gr = sm.get_result(vec, lambda);
 
                 metric_entropy(sm.sparse_array, gr, metric_entropy_entropy, lambda);
+                time = new Stopwatch();
+                time.Start();
+                SparseMatrixBal smb = new SparseMatrixBal(calcuteMethods.graph_strong);
 
-                SparseMatrixBal smb = new SparseMatrixBal(calcuteMethods.Graph);
-                Balance balance = new Balance(smb, 1e-2);
+                Balance balance = new Balance(smb, 1e-7);
+                
 
                 valuesBal = balance.balancing();
                 metric_entropy_balance.Text = balance.get_M().ToString();
+                double time_bal = time.Elapsed.TotalSeconds;
+                timebalance.Text = time_bal.ToString();
                 vs = valuesBal.Values.ToArray();
-                normalize(calcuteMethods.D);
+                normalize(calcuteMethods.d);
                 put_coor();
+                all_time.Text = (time_bal + time_obr + time_ent).ToString();
+                float d = calcuteMethods.d;
+                textBox4.Text = d.ToString();
+                
                 notCalculate = false;
             }
 
@@ -108,6 +127,7 @@ namespace _3D
             Gl.glRotated(X.Value, 0, 1, 0);
             Gl.glRotated(Y.Value, 0, 0, 1);
 
+            
             Gl.glColor3f(0, 0, 0);
             Gl.glBegin(Gl.GL_LINES);
             Gl.glVertex3d(0, 0, 0);
@@ -120,27 +140,19 @@ namespace _3D
 
             Gl.glBegin(Gl.GL_QUADS);
 
-            Gl.glColor3d(0, 0, 0);
 
             ///////////////////
-
-            int N = calcuteMethods.N1;
-            float d = calcuteMethods.D;
-            textBox4.Text = d.ToString();
-            float x_0 = calcuteMethods.X_0;
-            float y_0 = calcuteMethods.Y_0;
-            float d_2 = d * d;
-            double z = 0, z_bal = 0;
             //var correlation = Correlation.Pearson(gr, vs);
             //Console.WriteLine(correlation);
-            Gl.glColor3d(0, 0, 0);
+            Gl.glColor3f(0, 0, 0);
+            float z = 0, z_bal = 0;
             for (int i = 0; i < coor.Length / 4; i++)
             {
                 //Gl.glColor3d(0, 0, 0);
-                Gl.glVertex3d(coor[i, 0], coor[i, 1], 0);
-                Gl.glVertex3d(coor[i, 2], coor[i, 1], 0);
-                Gl.glVertex3d(coor[i, 2], coor[i, 3], 0);
-                Gl.glVertex3d(coor[i, 0], coor[i, 3], 0);
+                Gl.glVertex2f(coor[i, 0], coor[i, 1]);
+                Gl.glVertex2f(coor[i, 2], coor[i, 1]);
+                Gl.glVertex2f(coor[i, 2], coor[i, 3]);
+                Gl.glVertex2f(coor[i, 0], coor[i, 3]);
             }
 
             if (entropy_box.Checked)
@@ -149,11 +161,11 @@ namespace _3D
                 for (int i = 0; i < coor.Length / 4; i++)
                 {
                     //Gl.glColor3d(1, 0, 0);
-                    z = gr[i];
-                    Gl.glVertex3d(coor[i, 0], coor[i, 1], z);
-                    Gl.glVertex3d(coor[i, 2], coor[i, 1], z);
-                    Gl.glVertex3d(coor[i, 2], coor[i, 3], z);
-                    Gl.glVertex3d(coor[i, 0], coor[i, 3], z);
+                    z = (float) gr[i];
+                    Gl.glVertex3f(coor[i, 0], coor[i, 1], z);
+                    Gl.glVertex3f(coor[i, 2], coor[i, 1], z);
+                    Gl.glVertex3f(coor[i, 2], coor[i, 3], z);
+                    Gl.glVertex3f(coor[i, 0], coor[i, 3], z);
                 }
                 Gl.glColor3d(0, 0, 0);
             }
@@ -163,7 +175,7 @@ namespace _3D
                 for (int i = 0; i < coor.Length / 4; i++)
                 {
                     
-                    z_bal = vs[i];
+                    z_bal = (float)vs[i];
                     Gl.glVertex3d(coor[i, 0], coor[i, 1], z_bal);
                     Gl.glVertex3d(coor[i, 2], coor[i, 1], z_bal);
                     Gl.glVertex3d(coor[i, 2], coor[i, 3], z_bal);
@@ -172,10 +184,7 @@ namespace _3D
                 }
                 Gl.glColor3d(0, 0, 0);
             }
-            //////////////////
-            //Gl.glBegin(Gl.GL_LINE_STRIP);
             Gl.glEnd();
-
             Gl.glPopMatrix();
             Gl.glFlush();
             AnT.Invalidate();
@@ -187,12 +196,20 @@ namespace _3D
             double all_str = 0;
             for (int i=0; i < sm.Length; i++)
             {
-                foreach(int j in sm[i])
+                if (sm[i] != null)
                 {
-                    double pi =  gr[j] / lama;
-                    all_str += pi * Math.Log(pi);
+                    foreach (int j in sm[i])
+                    {
+                        double pi = gr[j] / lama;
+                        if (pi != 0) { 
+                            all_str += pi * Math.Log(pi); 
+                        }
+                    }
+                    if (gr[i] != 0)
+                    {
+                        all_sum += gr[i] * Math.Log(gr[i]);
+                    }
                 }
-                all_sum += gr[i] * Math.Log(gr[i]);
             }
             double metr_entr = all_sum - all_str;
             metric_entropy_entropy.Text = metr_entr.ToString();
@@ -201,7 +218,7 @@ namespace _3D
 
         private void calculate_mesure()
         {
-            geometricArray = calcuteMethods.calculate();
+            calcuteMethods.calculate();
         }
 
         public Form1() {
@@ -235,12 +252,13 @@ namespace _3D
         {
             int k = 0;
 
-            int N = calcuteMethods.N1;
-            float d = calcuteMethods.D;
-            float x_0 = calcuteMethods.X_0;
-            float y_0 = calcuteMethods.Y_0;
+            int N = calcuteMethods.N;
+            float d = calcuteMethods.d;
+            float x_0 = calcuteMethods.x_0;
+            float y_0 = calcuteMethods.y_0;
 
             float y, x;
+            List<int> geometricArray = calcuteMethods.comp;
             coor = new float[geometricArray.Count, 4];
             foreach (int comp in geometricArray)
             {
@@ -255,11 +273,12 @@ namespace _3D
             textBox6.Text = (coor.Length / 4).ToString();
         }
 
+
         private void textBox2_TextChanged(object sender, EventArgs e)
         {
             try
             {
-                calcuteMethods.X_0 = float.Parse(textBox2.Text);
+                calcuteMethods.x_0 = float.Parse(textBox2.Text);
             }
             catch (FormatException)
             {
@@ -271,7 +290,7 @@ namespace _3D
         {
             try
             {
-                calcuteMethods.Y_0 = float.Parse(textBox3.Text);
+                calcuteMethods.y_0 = float.Parse(textBox3.Text);
             }
             catch (FormatException)
             {
@@ -283,7 +302,7 @@ namespace _3D
         {
             try
             {
-                calcuteMethods.Iter = int.Parse(textBox1.Text);
+                calcuteMethods.iter = int.Parse(textBox1.Text);
             }
             catch (FormatException)
             {
@@ -313,6 +332,11 @@ namespace _3D
         }
 
         private void label3_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label11_Click(object sender, EventArgs e)
         {
 
         }

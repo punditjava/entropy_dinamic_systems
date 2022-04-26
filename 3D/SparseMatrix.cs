@@ -87,10 +87,11 @@ namespace osiptest
             //Dictionary<int, double> result = new Dictionary<int, double>();
             //int k = 0;
             //List<int> keys = new List<int>();
-            
+
             //foreach(int ke in gr.Keys){
             //    keys.Add(ke);
             //}
+            int s = 0;
             double[] mera = new double[v.Count];
             double sum = 0;
             for (int i = 0; i < v.Count; i++)
@@ -100,8 +101,10 @@ namespace osiptest
                 //{
                 mera[i] = v[i]; //* v[i];
                 sum += v[i];
+                s++;
                 //}
             }
+            Console.WriteLine(s);
             //Console.WriteLine(sum);
             return mera;
         }
